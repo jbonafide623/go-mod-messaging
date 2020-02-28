@@ -39,6 +39,8 @@ type MessageClient interface {
 	// the function returns error for any subscribe error
 	Subscribe(topics []types.TopicChannel, messageErrors chan error) error
 
+	SubscribeBatch(topics []types.BatchTopicChannel, messageErrors chan error) error
+
 	// Disconnect is to close all connections on the message bus
 	// and TopicChannel will also be closed
 	Disconnect() error

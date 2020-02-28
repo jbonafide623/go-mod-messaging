@@ -121,6 +121,26 @@ func (mc Client) Subscribe(topics []types.TopicChannel, messageErrors chan error
 	return nil
 }
 
+func (mc Client) SubscribeBatch(topics []types.BatchTopicChannel, messageErrors chan error) error {
+	optionsReader := mc.wrappedClient.OptionsReader()
+
+	for _, topic := range topics {
+		err := getTokenError(
+			mc.wrappedClient.Subscribe(
+				topic.Topic,
+				optionsReader.WillQos(),
+				newBatchMessageHandler(mc.unmarshaler, topic.Messages, messageErrors)),
+			optionsReader.ConnectTimeout(),
+			SubscribeOperation,
+			"Failed to create subscription")
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // Disconnect closes the connection to the connected MQTT server.
 func (mc Client) Disconnect() error {
 
@@ -162,6 +182,24 @@ func newMessageHandler(
 		messageChannel <- messageEnvelope
 	}
 }
+
+func newBatchMessageHandler(
+	unmarshaler MessageUnmarshaler,
+	messageChannel chan<- []types.MessageEnvelope,
+	errorChannel chan<- error) mqtt.MessageHandler {
+
+	return func(client mqtt.Client, message mqtt.Message) {
+		var messageEnvelope []types.MessageEnvelope
+		payload := message.Payload()
+		err := unmarshaler(payload, &messageEnvelope)
+		if err != nil {
+			errorChannel <- err
+		}
+
+		messageChannel <- messageEnvelope
+	}
+}
+
 
 // getTokenError determines if a Token is in an errored state and if so returns the proper error message. Otherwise,
 // nil.

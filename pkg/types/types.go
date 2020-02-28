@@ -24,6 +24,13 @@ type TopicChannel struct {
 	Messages chan MessageEnvelope
 }
 
+type BatchTopicChannel struct {
+	// Topic for subscriber to filter on if any
+	Topic string
+	// Measures is the return batch message channel for the subscriber
+	Messages chan []MessageEnvelope
+}
+
 // MessageBusConfig defines the messaging information need to connect to the message bus
 // in a publish-subscribe pattern
 type MessageBusConfig struct {

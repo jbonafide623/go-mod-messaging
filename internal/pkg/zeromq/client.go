@@ -123,6 +123,38 @@ func (client *zeromqClient) Subscribe(topics []types.TopicChannel, messageErrors
 	return errors.New(errorStr)
 }
 
+func (client *zeromqClient) SubscribeBatch(topics []types.BatchTopicChannel, messageErrors chan error) error {
+
+	if len(topics) == 0 {
+		return errors.New("no topic(s) specified")
+	} else if len(topics) > maxZeroMqSubscribeTopics {
+		return fmt.Errorf("number of topics(%d) exceeds the maximum capacity(%d)", len(topics), maxZeroMqSubscribeTopics)
+	}
+
+	client.quitSubscribe = make(chan interface{})
+	client.messageErrors = messageErrors
+	client.subscribers = make([]*zeromqSubscriber, len(topics))
+	var errorsSubscribe []error
+	var err error
+
+	for idx, _ := range topics {
+		client.subscribers[idx], err = client.subscribeTopic(nil)
+		if err != nil {
+			errorsSubscribe = append(errorsSubscribe, err)
+		}
+	}
+
+	if len(errorsSubscribe) == 0 {
+		return nil
+	}
+
+	var errorStr string
+	for _, err := range errorsSubscribe {
+		errorStr = errorStr + fmt.Sprintf("%s  ", err.Error())
+	}
+	return errors.New(errorStr)
+}
+
 func (client *zeromqClient) subscribeTopic(topic *types.TopicChannel) (*zeromqSubscriber, error) {
 
 	subscriber := zeromqSubscriber{}
